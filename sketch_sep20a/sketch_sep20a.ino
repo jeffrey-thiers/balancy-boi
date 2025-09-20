@@ -18,6 +18,15 @@ const int interval = 200;
 int lastMillis = 0;
 int counter = 0;
 
+// define the state machine
+enum SystemState{
+  HOLD,
+  TILT_RIGHT,
+  TILT_LEFT
+};
+
+SystemState currentState = HOLD;
+
 
 void setup() {
   // comms for MCU6050 IMU
@@ -36,28 +45,45 @@ void setup() {
 
 void loop() {
 
+  // read acceleration and speed data
   float* data = getData();
+  
+  // enter the state machine
+  switch (currentState){
+    case HOLD:
+      digitalWrite(2, LOW);
+      digitalWrite(3, LOW);
+      if (data[1] > .1){
+        currentState = TILT_RIGHT;
+        break;
+      }
+      if (data[1] < -.1){
+        currentState = TILT_LEFT;
+        break;
+      }
+      break;
 
+    case TILT_RIGHT:
+      digitalWrite(2, HIGH);
+      if (data[1] < .1){
+        currentState = HOLD;
+      }
+      break;
+
+    case TILT_LEFT:
+      digitalWrite(3, HIGH);
+      if (data[1] > -.1){
+        currentState = HOLD;
+      }
+      break;
+  }
+
+  // write data to the console
   int currentMillis = millis();
   if (currentMillis - lastMillis >= interval){
     lastMillis = currentMillis;
     printReadings(data);
-
-    // write data and check LED
-    digitalWrite(2, LOW);
-    digitalWrite(3, LOW);
-    if (data[1] > .1) {
-    digitalWrite(2, HIGH);
-    } 
-    if (data[1] < -.1) {
-      digitalWrite(3, HIGH);
-    }
-
   }
-  
-  
-
-
 }
 
 
