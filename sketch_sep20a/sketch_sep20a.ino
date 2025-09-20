@@ -13,19 +13,51 @@ const float ACCEL_SCALE_FACTOR = 16384.0;  // For +/-2g
 const float GYRO_SCALE_FACTOR = 131.0;    // For +/-250 dps
 
 
+// print time interval
+const int interval = 200;
+int lastMillis = 0;
+int counter = 0;
+
+
 void setup() {
+  // comms for MCU6050 IMU
   Serial.begin(9600);
   Wire.begin();
   Wire.beginTransmission(MPU_ADDR);
   Wire.write(0x6B); // PWR_MGMT_1 register
   Wire.write(0);    // set to zero (wakes up the MPU-6050)
   Wire.endTransmission(true);
+
+  // LED pins
+  pinMode(2, OUTPUT);
+  pinMode(3, OUTPUT);
 }
 
 
 void loop() {
+
   float* data = getData();
-  printReadings(data);
+
+  int currentMillis = millis();
+  if (currentMillis - lastMillis >= interval){
+    lastMillis = currentMillis;
+    printReadings(data);
+
+    // write data and check LED
+    digitalWrite(2, LOW);
+    digitalWrite(3, LOW);
+    if (data[1] > .1) {
+    digitalWrite(2, HIGH);
+    } 
+    if (data[1] < -.1) {
+      digitalWrite(3, HIGH);
+    }
+
+  }
+  
+  
+
+
 }
 
 
@@ -44,18 +76,21 @@ float* getData() {
   raw_gz = Wire.read() << 8 | Wire.read();
 
   float accel_y = raw_ay / ACCEL_SCALE_FACTOR;
+  float accel_z = raw_az / ACCEL_SCALE_FACTOR;
   float gyro_x = raw_gx / GYRO_SCALE_FACTOR;
 
-  static float readings[2];
+  static float readings[3];
   readings[0] = accel_y;
-  readings[1] = gyro_x;
+  readings[1] = accel_z;
+  readings[2] = gyro_x;
 
   return readings;
 }
 
 
 void printReadings(float arr[]) {
-  Serial.print("accel, Y="); Serial.print(arr[0]);
-  Serial.print(" | w (dps): X="); Serial.println(arr[1]);
-  delay(200);
+  Serial.print("accel, Y = "); Serial.print(arr[0]);
+  Serial.print(" | accel, Z = "); Serial.print(arr[1]);
+  Serial.print(" | w (dps): X = "); Serial.println(arr[2]);
+  // delay(200);
 }
