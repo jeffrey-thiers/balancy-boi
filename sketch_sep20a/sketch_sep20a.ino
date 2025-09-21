@@ -1,4 +1,5 @@
 #include <Wire.h>
+#include <Servo.h>
 
 const int MPU_ADDR = 0x68; // I2C address of the MPU-6050
 
@@ -17,6 +18,10 @@ const float GYRO_SCALE_FACTOR = 131.0;    // For +/-250 dps
 const int interval = 200;
 int lastMillis = 0;
 int counter = 0;
+
+Servo esc;  // Create a Servo object to control the ESC
+int escPin = 9;
+int buttonPin = 12;
 
 // define the state machine
 enum SystemState{
@@ -40,6 +45,17 @@ void setup() {
   // LED pins
   pinMode(2, OUTPUT);
   pinMode(3, OUTPUT);
+
+  // wait for button push to enter loop
+  pinMode(buttonPin, INPUT_PULLUP);
+  //Serial.println("push the button, fool");
+  //while(digitalRead(buttonPin) == HIGH){
+  //  // wait
+  //}
+  Serial.println("setting up the motor");
+  setupMotor();
+  delay(3000);
+  Serial.println("Entering the loop");
 }
 
 
@@ -53,6 +69,7 @@ void loop() {
     case HOLD:
       digitalWrite(2, LOW);
       digitalWrite(3, LOW);
+      changeThrottle(1000);
       if (data[1] > .1){
         currentState = TILT_RIGHT;
         break;
@@ -65,6 +82,7 @@ void loop() {
 
     case TILT_RIGHT:
       digitalWrite(2, HIGH);
+      changeThrottle(1040);
       if (data[1] < .1){
         currentState = HOLD;
       }
@@ -72,6 +90,7 @@ void loop() {
 
     case TILT_LEFT:
       digitalWrite(3, HIGH);
+      changeThrottle(1040);
       if (data[1] > -.1){
         currentState = HOLD;
       }
@@ -120,3 +139,24 @@ void printReadings(float arr[]) {
   Serial.print(" | w (dps): X = "); Serial.println(arr[2]);
   // delay(200);
 }
+
+
+void setupMotor(){
+  esc.attach(escPin); // ESC signal connected to pin D9
+  Serial.begin(9600);
+
+  // Arm the ESC
+  Serial.println("Arming ESC...");
+  esc.writeMicroseconds(1000); // Send low throttle to arm (usually 1000µs)
+  Serial.println("plug in battery now, then push button");
+  while(digitalRead(buttonPin) == HIGH){
+    // wait
+  }
+
+  Serial.println("ESC Armed. Starting motor...");
+}
+
+void changeThrottle(int newSpeed){
+  esc.writeMicroseconds(newSpeed); // Range is typically 1000 (stop) to 2000 (full throttle)
+}
+
