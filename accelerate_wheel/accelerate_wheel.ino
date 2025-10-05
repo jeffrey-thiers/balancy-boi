@@ -3,40 +3,64 @@
 Servo esc;  // Create a Servo object to control the ESC
 int escPin = 9;
 int buttonPin = 12;
-
 int CURRENT_SPEED = 1500; //neutral throttle
-int SPEED_STEP = 10; // step size of pwm changes
+int SPEED_STEP = 2; // step size of pwm changes
+int lastMillis = 0;
+int interval = 50;
+
 
 void setup() {
   pinMode(buttonPin, INPUT_PULLUP);
   Serial.println("setting up the motor");
   setupMotor();
-  delay(3000);
+  delay(1000);
   Serial.println("Entering the loop");
 }
 
+
 void loop(){
-  // accelerate wheel
-  delay(3000);
-  accelerateWheel(CURRENT_SPEED);
-  delay(3000);
+  
+
+  // Accelerate wheel
+  if (millis() - lastMillis >= interval){
+    lastMillis = millis();
+    accelerateRight(CURRENT_SPEED);
+    Serial.println(CURRENT_SPEED);
+  }
+  
   Serial.println("end of loop");
 }
 
-void accelerateWheel(int speed){
+
+void accelerateRight(int speed){
   //accelertates the wheel
-  if(speed >= 2000){
-    Serial.println("can't accelerate past 2000 us");
+  if(speed >= 1600){
+    Serial.println("pwm speed limit reached"); //typically 2000us for bidirectional speed controllers.
     return;
   } else if (speed <= 1000){
-    Serial.println("can't go slower than 0 us");
+    Serial.println("pwm speed floor reached"); // typically 1000us for bidirectional speed controllers.
     return;
   } else {
     CURRENT_SPEED = speed + SPEED_STEP;
-    Serial.println(CURRENT_SPEED);
+    //Serial.println(CURRENT_SPEED);
     esc.writeMicroseconds(CURRENT_SPEED);
   }
-  
+}
+
+
+void accelerateLeft(int speed){
+  //accelertates the wheel
+  if(speed >= 1600){
+    Serial.println("pwm speed limit reached"); //typically 2000us for bidirectional speed controllers.
+    return;
+  } else if (speed <= 1000){
+    Serial.println("pwm speed floor reached"); // typically 1000us for bidirectional speed controllers.
+    return;
+  } else {
+    CURRENT_SPEED = speed - SPEED_STEP;
+    //Serial.println(CURRENT_SPEED);
+    esc.writeMicroseconds(CURRENT_SPEED);
+  }
 }
 
 

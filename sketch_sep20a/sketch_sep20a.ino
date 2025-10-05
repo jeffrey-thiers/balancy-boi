@@ -97,10 +97,9 @@ void loop() {
       break;
   }
 
-  // write data to the console
-  int currentMillis = millis();
-  if (currentMillis - lastMillis >= interval){
-    lastMillis = currentMillis;
+  // write data to the console in set intervals
+  if (millis() - lastMillis >= interval){
+    lastMillis = millis();
     printReadings(data);
   }
 }
