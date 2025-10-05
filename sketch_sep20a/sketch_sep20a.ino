@@ -2,11 +2,9 @@
 #include <Servo.h>
 
 const int MPU_ADDR = 0x68; // I2C address of the MPU-6050
-
 int16_t raw_ax, raw_ay, raw_az;
 int16_t raw_gx, raw_gy, raw_gz;
 int16_t raw_temp;
-
 // Choose your desired sensitivity range
 // Default values are +/-2g for accel and +/-250 deg/s for gyro
 // Modify these if you change the configuration registers
@@ -15,19 +13,22 @@ const float GYRO_SCALE_FACTOR = 131.0;    // For +/-250 dps
 
 
 // print time interval
-const int interval = 200;
+const int dataPrintInterval = 200;
 int lastMillis = 0;
 int counter = 0;
 
 Servo esc;  // Create a Servo object to control the ESC
 int escPin = 9;
 int buttonPin = 12;
+int currentSpeed = 1500; //neutral throttle
+int speedStep = 1; // step size of pwm changes
+int accelInterval = 100;
 
 // define the state machine
 enum SystemState{
   HOLD,
-  TILT_RIGHT,
-  TILT_LEFT
+  TILTED_RIGHT,
+  TILTED_LEFT
 };
 
 SystemState currentState = HOLD;
@@ -54,7 +55,7 @@ void setup() {
   //}
   Serial.println("setting up the motor");
   setupMotor();
-  delay(3000);
+  delay(1000);
   Serial.println("Entering the loop");
 }
 
@@ -69,39 +70,42 @@ void loop() {
     case HOLD:
       digitalWrite(2, LOW);
       digitalWrite(3, LOW);
-      changeThrottle(1000);
+      currentSpeed = 1500;
+      Serial.println(currentSpeed);
+      esc.writeMicroseconds(currentSpeed);
       if (data[1] > .1){
-        currentState = TILT_RIGHT;
+        currentState = TILTED_RIGHT;
         break;
       }
       if (data[1] < -.1){
-        currentState = TILT_LEFT;
+        currentState = TILTED_LEFT;
         break;
       }
       break;
 
-    case TILT_RIGHT:
+    case TILTED_RIGHT:
       digitalWrite(2, HIGH);
-      changeThrottle(1040);
+      Serial.println(currentSpeed);
+      accelerateRight(currentSpeed);
       if (data[1] < .1){
         currentState = HOLD;
       }
       break;
 
-    case TILT_LEFT:
+    case TILTED_LEFT:
       digitalWrite(3, HIGH);
-      changeThrottle(1040);
+      accelerateLeft(currentSpeed);
       if (data[1] > -.1){
         currentState = HOLD;
       }
       break;
   }
 
-  // write data to the console in set intervals
-  if (millis() - lastMillis >= interval){
-    lastMillis = millis();
-    printReadings(data);
-  }
+  //// write data to the console in set intervals
+  //if (millis() - lastMillis >= dataPrintInterval){
+  //  lastMillis = millis();
+  //  printReadings(data);
+  //}
 }
 
 
@@ -155,7 +159,56 @@ void setupMotor(){
   Serial.println("ESC Armed. Starting motor...");
 }
 
+
 void changeThrottle(int newSpeed){
   esc.writeMicroseconds(newSpeed); // Range is typically 1000 (stop) to 2000 (full throttle)
+}
+
+
+void accelerateRight(int speed){
+  //accelertates the wheel
+  if(speed >= 1600){
+    // too fast to change the speed
+    Serial.println("pwm speed limit reached"); //typically 2000us for bidirectional speed controllers.
+    currentSpeed = 1590;
+    esc.writeMicroseconds(currentSpeed);
+    return;
+  } else if (speed <= 1300){
+    // too fast to change the speed
+    Serial.println("pwm speed floor reached"); // typically 1000us for bidirectional speed controllers.
+    currentSpeed = 1310;
+    esc.writeMicroseconds(currentSpeed);
+    return;
+  } else if (millis() - lastMillis >= accelInterval){
+    // change the speed of the motor
+    lastMillis = millis();
+    currentSpeed = speed + speedStep;
+    esc.writeMicroseconds(currentSpeed);
+    Serial.println(currentSpeed);
+  }
+}
+
+
+void accelerateLeft(int speed){
+  //accelertates the wheel
+  if(speed >= 1600){
+    // too fast to change the speed
+    Serial.println("pwm speed limit reached"); //typically 2000us for bidirectional speed controllers.
+    currentSpeed = 1590;
+    esc.writeMicroseconds(currentSpeed);
+    return;
+  } else if (speed <= 1300){
+    // too fast to change the speed
+    Serial.println("pwm speed floor reached"); // typically 1000us for bidirectional speed controllers.
+    currentSpeed = 1310;
+    esc.writeMicroseconds(currentSpeed);
+    return;
+  } else if (millis() - lastMillis >= accelInterval){
+    // change the speed of the motor
+    lastMillis = millis();
+    currentSpeed = speed - speedStep;
+    esc.writeMicroseconds(currentSpeed);
+    Serial.println(currentSpeed);
+  }
 }
 

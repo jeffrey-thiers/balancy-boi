@@ -1,8 +1,8 @@
 #include <Servo.h>
 
 Servo esc;  // Create a Servo object to control the ESC
-int escPin = 9;
 int buttonPin = 12;
+int escPin = 9;
 int CURRENT_SPEED = 1500; //neutral throttle
 int SPEED_STEP = 2; // step size of pwm changes
 int lastMillis = 0;
@@ -19,16 +19,8 @@ void setup() {
 
 
 void loop(){
-  
-
-  // Accelerate wheel
-  if (millis() - lastMillis >= interval){
-    lastMillis = millis();
-    accelerateRight(CURRENT_SPEED);
-    Serial.println(CURRENT_SPEED);
-  }
-  
-  Serial.println("end of loop");
+  accelerateRight(CURRENT_SPEED);
+  // Serial.println("end of loop");
 }
 
 
@@ -40,10 +32,12 @@ void accelerateRight(int speed){
   } else if (speed <= 1000){
     Serial.println("pwm speed floor reached"); // typically 1000us for bidirectional speed controllers.
     return;
-  } else {
+  } else if (millis() - lastMillis >= interval){
+    lastMillis = millis();
     CURRENT_SPEED = speed + SPEED_STEP;
     //Serial.println(CURRENT_SPEED);
     esc.writeMicroseconds(CURRENT_SPEED);
+    Serial.println(CURRENT_SPEED);
   }
 }
 
@@ -56,10 +50,12 @@ void accelerateLeft(int speed){
   } else if (speed <= 1000){
     Serial.println("pwm speed floor reached"); // typically 1000us for bidirectional speed controllers.
     return;
-  } else {
+  } else if (millis() - lastMillis >= interval){
+    lastMillis = millis();
     CURRENT_SPEED = speed - SPEED_STEP;
     //Serial.println(CURRENT_SPEED);
     esc.writeMicroseconds(CURRENT_SPEED);
+    Serial.println(CURRENT_SPEED);
   }
 }
 
